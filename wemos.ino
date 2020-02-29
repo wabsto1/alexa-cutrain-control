@@ -1,4 +1,5 @@
 #include <ESP8266WiFi.h>
+#include <Stepper.h>
 #include <ESP8266WebServer.h>
 #include <WiFiUdp.h>
 #include <functional>
@@ -14,8 +15,8 @@ bool deckingCurtainOn();
 bool deckingCurtainOff();
 
 // Change this before you flash
-const char* ssid = "Your_Network_SSID";
-const char* password = "Your-super-secret-password";
+const char* ssid = "WeeabooNet";
+const char* password = "FuckingKangaroos";
 
 boolean wifiConnected = false;
 
@@ -31,12 +32,10 @@ bool isdeckingCurtainOn = false;
 
 // Motor -------------------------
 
-#define SLEEP 16 //6 actually enable
-#define STEP 13 //4
-#define DIR 0 //2
-
-#define STEPS_PER_ROTATION 300
+const int stepsPerRevolution = 200;
 boolean outstandingWork = false;
+
+Stepper myStepper(stepsPerRevolution,5,4,0,2); 
 
 
 unsigned long TimerTravel;    //"ALWAYS use unsigned long for timers"
@@ -51,13 +50,14 @@ void setup()
    
   // Initialise wifi connection
   wifiConnected = connectWifi();
+  myStepper.setSpeed(60);
   
   if(wifiConnected){
     upnpBroadcastResponder.beginUdpMulticast();
     
     // Define your switches here. Max 10
     // Format: Alexa invocation name, local port no, on callback, off callback
-    office = new Switch("decking curtains", 80, deckingCurtainOn, deckingCurtainOff);
+    office = new Switch("Bedroom Curtains", 80, deckingCurtainOn, deckingCurtainOff);
 
     Serial.println("Adding switches upnp broadcast responder");
     upnpBroadcastResponder.addDevice(*office);
@@ -68,10 +68,12 @@ void setup()
 
 // Motor -------------------
 
+
+/*
   pinMode(SLEEP,OUTPUT);
   pinMode(STEP,OUTPUT);
   pinMode(DIR,OUTPUT);
-  
+  */
 //end motor ---------------
 
 
@@ -86,8 +88,6 @@ void loop()
 	 }
 
 
-
-
        if (((millis()-TimerTravel) <= 7100UL) && (outstandingWork == true))  // Set the 'UL' figure to the tine it takes to open or close your curtain
       {
       Serial.println(F("Moving Curtain")); 
@@ -98,7 +98,7 @@ void loop()
         outstandingWork = false;
         //Serial.println(F("Finished doing my work!"));
         //Serial.println(F("SLEEP HIGH"));
-        digitalWrite(SLEEP,HIGH);
+        Serial.println("SLEEP");
       }
 
 
@@ -167,12 +167,11 @@ boolean connectWifi(){
 
 void openCurtain() {
   Serial.print("Still Opening the curtain...");
-  
-        Serial.println(F("dir HIGH"));
-        digitalWrite(DIR,HIGH);
+ 
+        Serial.println("Opening");
+        myStepper.step(stepsPerRevolution)
         TimerTravel= millis();
         Serial.println(F("SLEEP LOW"));
-        digitalWrite(SLEEP,LOW);
         delay(500);
         outstandingWork = true;
 
@@ -186,10 +185,10 @@ void closeCurtain() {
     Serial.print("Still closing the curtain...");
   
         Serial.println(F("dir LOW"));
-        digitalWrite(DIR,LOW);
+                Serial.println("Closing");
+        myStepper.step(-stepsPerRevolution)
         TimerTravel= millis();
         Serial.println(F("SLEEP LOW"));
-        digitalWrite(SLEEP,LOW);
         delay(500);
         outstandingWork = true;
   
@@ -197,7 +196,7 @@ void closeCurtain() {
 }
 
 // for the motor -------------
-
+/*
 void stepNow(int totalSteps) {
   Serial.print(totalSteps);
   Serial.println(F(" steps."));
@@ -210,11 +209,11 @@ void stepNow(int totalSteps) {
     delayMicroseconds(1100);
   }
 }
-
+*/
 //----------------------------
 
 
 void moveCurtain() {
   delayMicroseconds(500);
-  stepNow(STEPS_PER_ROTATION);
+  myStepper.step(stepsPerRevolution)
 }
